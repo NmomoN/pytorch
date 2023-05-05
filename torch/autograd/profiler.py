@@ -170,6 +170,7 @@ class profile:
             enabled=True,
             *,
             use_cuda=False,
+            use_custombackend=False,
             record_shapes=False,
             with_flops=False,
             profile_memory=False,
@@ -182,6 +183,7 @@ class profile:
         if not self.enabled:
             return
         self.use_cuda = use_cuda
+        self.use_custombackend = use_custombackend
         self.function_events: Optional[EventList] = None
         self.entered = False
         self.record_shapes = record_shapes
@@ -216,6 +218,18 @@ class profile:
                 self.profiler_kind = ProfilerState.KINETO_GPU_FALLBACK
             else:
                 self.kineto_activities.add(ProfilerActivity.CUDA)
+
+        if self.use_custombackend:
+            assert not use_cuda, \
+              "Only one device mode is s uported."
+            if (not use_kineto or ProfilerActivity.PrivateUse1 not in
+                    _supported_activities()):
+                assert self.use_cpu, "Legacy CUDA profiling requires use_cpu=True"
+                self.profiler_kind = ProfilerState.KINETO_CUSTOM_FALLBACK
+            else:
+                pass
+                self.kineto_activities.add(ProfilerActivity.PrivateUse1)
+            
 
         assert len(self.kineto_activities) > 0, \
             "No activities specified for the profiler"
@@ -260,6 +274,7 @@ class profile:
         self.function_events = EventList(
             parsed_results,
             use_cuda=self.use_cuda,
+            use_custombackend=self.use_custombackend,
             profile_memory=self.profile_memory,
             with_flops=self.with_flops)
         self.function_events._build_tree()
@@ -355,6 +370,11 @@ class profile:
                 mem_record.device_type() in [DeviceType.CUDA, DeviceType.HIP] \
                 else 0
 
+        def _privateuse1_memory_usage(mem_record):
+            return mem_record.nbytes() if \
+                mem_record.device_type() in [DeviceType.PrivateUse1] \
+                else 0
+
         # Create and return FunctionEvent list
         function_events = []
         cuda_corr_map: Dict[int, List[FunctionEvent]] = {}
@@ -368,11 +388,13 @@ class profile:
 
             cpu_memory_usage = 0
             cuda_memory_usage = 0
+            privateuse1_memory_usage = 0
             if kineto_event.device_type() == DeviceType.CPU:
                 # find the corresponding memory allocation events
                 for mem_record in mem_records_acc.in_interval(kineto_event.start_us(), abs_end_us):
                     cpu_memory_usage += _cpu_memory_usage(mem_record[0])
                     cuda_memory_usage += _cuda_memory_usage(mem_record[0])
+                    privateuse1_memory_usage += _privateuse1_memory_usage(mem_record[0])
                     mem_record[1] = True
 
             is_async = kineto_event.is_async() or (
@@ -392,6 +414,7 @@ class profile:
                 scope=kineto_event.scope(),
                 cpu_memory_usage=cpu_memory_usage,
                 cuda_memory_usage=cuda_memory_usage,
+                privateuse1_memory_usage=privateuse1_memory_usage,
                 is_async=is_async,
                 sequence_nr=kineto_event.sequence_nr(),
                 device_type=kineto_event.device_type(),

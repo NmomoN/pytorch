@@ -18,6 +18,7 @@ from torch._C._profiler import (
 )
 from torch.autograd import kineto_available, ProfilerActivity
 from torch.profiler._memory_profiler import MemoryProfile, MemoryProfileTimeline
+from torch._C import _get_privateuse1_backend_name
 
 
 __all__ = [
@@ -102,9 +103,11 @@ class _KinetoProfile:
         self.stop_trace()
 
     def prepare_trace(self):
+        custom_backend_name = _get_privateuse1_backend_name().upper()
         self.profiler = prof.profile(
             use_cuda=(ProfilerActivity.CUDA in self.activities),
             use_cpu=(ProfilerActivity.CPU in self.activities),
+            use_custombackend=(ProfilerActivity.custom_backend_name in self.activities),
             record_shapes=self.record_shapes,
             with_flops=self.with_flops,
             profile_memory=self.profile_memory,

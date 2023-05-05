@@ -2,6 +2,7 @@
 
 #include <ATen/record_function.h>
 #include <c10/util/overloaded.h>
+#include <c10/core/DeviceType.h>
 #include <torch/csrc/DynamicTypes.h>
 #include <torch/csrc/autograd/utils/wrap_outputs.h>
 #include <torch/csrc/jit/python/pybind_utils.h>
@@ -38,7 +39,8 @@ void initPythonBindings(PyObject* module) {
       .value("NVTX", ProfilerState::NVTX)
       .value("ITT", ProfilerState::ITT)
       .value("KINETO", ProfilerState::KINETO)
-      .value("KINETO_GPU_FALLBACK", ProfilerState::KINETO_GPU_FALLBACK);
+      .value("KINETO_GPU_FALLBACK", ProfilerState::KINETO_GPU_FALLBACK)
+      .value("KINETO_CUSTOM_FALLBACK", ProfilerState::KINETO_CUSTOM_FALLBACK);
 
   py::enum_<ActiveProfilerType>(m, "ActiveProfilerType")
       .value("NONE", ActiveProfilerType::NONE)
@@ -50,7 +52,8 @@ void initPythonBindings(PyObject* module) {
   py::enum_<ActivityType>(m, "ProfilerActivity")
       .value("CPU", ActivityType::CPU)
       .value("XPU", ActivityType::XPU)
-      .value("CUDA", ActivityType::CUDA);
+      .value("CUDA", ActivityType::CUDA)
+      .value(get_privateuse1_backend(), ActivityType::PrivateUse1)
 
   py::class_<ExperimentalConfig>(m, "_ExperimentalConfig")
       .def(

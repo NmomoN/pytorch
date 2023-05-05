@@ -17,10 +17,12 @@ class EventList(list):
     """A list of Events (for pretty printing)"""
     def __init__(self, *args, **kwargs):
         use_cuda = kwargs.pop('use_cuda', True)
+        use_custombackend = kwargs.pop('use_custombackend', False)
         profile_memory = kwargs.pop('profile_memory', False)
         with_flops = kwargs.pop('with_flops', False)
         super().__init__(*args, **kwargs)
         self._use_cuda = use_cuda
+        self._use_custombackend = use_custombackend
         self._profile_memory = profile_memory
         self._tree_built = False
         self._with_flops = with_flops

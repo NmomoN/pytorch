@@ -564,10 +564,11 @@ void prepareProfiler(
   }
   TORCH_CHECK(
       config.state == ProfilerState::KINETO ||
-          config.state == ProfilerState::KINETO_GPU_FALLBACK,
+          config.state == ProfilerState::KINETO_GPU_FALLBACK ||
+          config.state == ProfilerState::KINETO_CUSTOM_FALLBACK,
       "Supported only in Kineto profiler");
   torch::profiler::impl::kineto::prepareTrace(
-      /*cpuOnly=*/!(at::hasCUDA() || at::hasXPU()),
+      /*cpuOnly=*/!(at::hasCUDA() || at::hasXPU() || at::hasPrivateUse1()),
       activities,
       config.experimental_config);
 
@@ -639,7 +640,8 @@ void enableProfiler(
 
   TORCH_CHECK(
       config.state == ProfilerState::KINETO ||
-      config.state == ProfilerState::KINETO_GPU_FALLBACK || config.global());
+      config.state == ProfilerState::KINETO_GPU_FALLBACK || 
+      config.state == ProfilerState::KINETO_CUSTOM_FALLBACK || config.global());
   TORCH_CHECK(!activities.empty(), "No activities specified.");
   TORCH_INTERNAL_ASSERT(
       has_cpu || !config.global(),
@@ -665,6 +667,7 @@ std::unique_ptr<ProfilerResult> disableProfiler() {
       state_ptr &&
           (config.state == ProfilerState::KINETO ||
            config.state == ProfilerState::KINETO_GPU_FALLBACK ||
+           config.state == ProfilerState::KINETO_CUSTOM_FALLBACK ||
            config.state == ProfilerState::KINETO_ONDEMAND ||
            config.state == ProfilerState::NVTX ||
            config.state == ProfilerState::ITT),
@@ -679,14 +682,15 @@ std::unique_ptr<ProfilerResult> disableProfiler() {
     return std::make_unique<ProfilerResult>();
   }
 
-  // Shared among NVTX, KINETO, KINETO_GPU_FALLBACK
+  // Shared among NVTX, KINETO, KINETO_GPU_FALLBACK, KINETO_CUSTOM_FALLBACK
   std::unique_ptr<ProfilerResult> result;
   if (state_ptr->config().state == ProfilerState::NVTX) {
     result = std::make_unique<ProfilerResult>();
   }
 
   if (config.state == ProfilerState::KINETO ||
-      config.state == ProfilerState::KINETO_GPU_FALLBACK) {
+      config.state == ProfilerState::KINETO_GPU_FALLBACK ||
+      config.state == ProfilerState::KINETO_CUSTOM_FALLBACK) {
     auto kineto_state_ptr =
         std::static_pointer_cast<KinetoThreadLocalState>(state_ptr);
     auto trace = kineto_state_ptr->finalizeTrace();

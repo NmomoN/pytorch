@@ -11,6 +11,7 @@
 #include <ATen/detail/MPSHooksInterface.h>
 #include <ATen/detail/ORTHooksInterface.h>
 #include <ATen/detail/XPUHooksInterface.h>
+#include <ATen/detail/PrivateUse1HooksInterface.h>
 #include <c10/core/QEngine.h>
 #include <c10/core/impl/DeviceGuardImplInterface.h>
 #include <c10/util/CallOnce.h>
@@ -105,6 +106,9 @@ class TORCH_API Context {
   }
   static bool hasORT() {
     return c10::impl::hasDeviceGuardImpl(at::DeviceType::ORT);
+  }
+  static bool hasPrivateUse1() {
+    return detail::getPrivateUse1Hooks().hasPrivateUse1();
   }
   // defined in header so that getNonVariableType has ability to inline
   // call_once check. getNonVariableType is called fairly frequently
@@ -377,6 +381,10 @@ static inline bool hasORT() {
 
 static inline bool hasXPU() {
   return globalContext().hasXPU();
+}
+
+static inline bool hasPrivateUse1() {
+  return globalContext().hasPrivateUse1();
 }
 
 // Despite its name, this function returns the number of *CUDA* GPUs.

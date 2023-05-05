@@ -25,6 +25,7 @@ const std::set<libkineto::ActivityType> kCpuTypes{
     libkineto::ActivityType::XPU_RUNTIME,
     libkineto::ActivityType::CUDA_RUNTIME,
     libkineto::ActivityType::CUDA_DRIVER,
+    libkineto::ActivityType::PrivateUse1_RUNTIME,
     libkineto::ActivityType::PYTHON_FUNCTION,
 };
 
@@ -42,6 +43,14 @@ const std::set<libkineto::ActivityType> kXpuTypes = {
     libkineto::ActivityType::CONCURRENT_KERNEL,
     // XPU_RUNTIME appears in both kCpuTypes and kXpuTypes.
     libkineto::ActivityType::XPU_RUNTIME,
+};
+const std::set<libkineto::ActivityType> kPrivateUse1Types = {
+    libkineto::ActivityType::PrivateUse1_MEMCPY,
+    libkineto::ActivityType::PrivateUse1_MEMSET,
+    libkineto::ActivityType::CONCURRENT_KERNEL,
+    // CUSTOM_RUNTIME appears in both kCpuTypes and kPrivateUse1Types.
+    libkineto::ActivityType::PrivateUse1_RUNTIME,
+    libkineto::ActivityType::PrivateUse1_DRIVER,
 };
 } // namespace
 #endif // USE_KINETO
@@ -228,6 +237,9 @@ void prepareTrace(
   }
   if (activities.count(torch::autograd::profiler::ActivityType::CUDA)) {
     k_activities.insert(kCudaTypes.begin(), kCudaTypes.end());
+  }
+  if (activities.count(torch::autograd::profiler::ActivityType::PrivateUse1)) {
+    k_activities.insert(kPrivateUse1Types.begin(), kPrivateUse1Types.end());
   }
 
   ExperimentalConfigWrapper configWrap(config);
